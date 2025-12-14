@@ -93,19 +93,27 @@ const commands = [
 // READY + REGISTRO
 // ========================================================
 
-client.once("ready", async () => {
+client.once("clientReady", async () => {
     console.log(`🤖 Bot online como ${client.user.tag}`);
 
-    const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
+    const canalId = "1445362491423985795";
 
-    for (const guild of client.guilds.cache.values()) {
-        await rest.put(
-            Routes.applicationGuildCommands(client.user.id, guild.id),
-            { body: commands }
-        );
-        console.log(`✅ Slash registrados em ${guild.name}`);
+    try {
+        const canal = await client.channels.fetch(canalId);
+
+        if (!canal || !canal.isTextBased()) return;
+
+        await canal.send({
+            embeds: [embed],
+            components: [botoes]
+        });
+
+        console.log("📢 Mensagem de inicialização enviada.");
+    } catch (e) {
+        console.error("Erro ao enviar mensagem inicial:", e);
     }
 });
+
 
 // ========================================================
 // INVENTÁRIO EMBED
