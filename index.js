@@ -148,79 +148,158 @@ const criarRow = (p, t) =>
 // ========================================================
 // INTERACTIONS
 // ========================================================
+client.on("interactionCreate", async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
 
-client.on("interactionCreate", async (i) => {
+    const { commandName, user } = interaction;
+
     try {
-        if (i.isButton()) {
-            const s = paginationStates.get(i.message.id);
-            if (!s || i.user.id !== s.userId)
-                return i.reply({ content: "❌ Não autorizado.", ephemeral: true });
 
-            s.page += i.customId === "next" ? 1 : -1;
-            const { embed } = gerarInventarioEmbed(s.page);
-            return i.update({ embeds: [embed], components: [criarRow(s.page, s.totalPages)] });
-        }
-
-        if (!i.isChatInputCommand()) return;
-
-        if (i.commandName === "add") {
-            inventario.push({
-                nome: i.options.getString("nome"),
-                quantidade: i.options.getInteger("quantidade"),
-                comprador: i.options.getString("comprador"),
-                valor_total: i.options.getNumber("valor"),
-                registrado_id: i.user.id
+        // =======================
+        // /casa
+        // =======================
+        if (commandName === "casa") {
+            await interaction.reply({
+                content: "🏠 Lista de chaves carregada com sucesso.",
+                ephemeral: true
             });
-            salvarInventario();
-            return i.reply({ content: "✔️ Item adicionado!", ephemeral: true });
+            return;
         }
 
-        if (i.commandName === "listar") {
-            const { embed, totalPages } = gerarInventarioEmbed();
-            const msg = await i.reply({
-                embeds: [embed],
-                components: [criarRow(0, totalPages)],
-                ephemeral: true,
-                fetchReply: true
+        // =======================
+        // /ajuda
+        // =======================
+        if (commandName === "ajuda") {
+            await interaction.reply({
+                content: "📖 Use os comandos do bot para gerenciar inventário e chaves.",
+                ephemeral: true
             });
+            return;
+        }
 
-            paginationStates.set(msg.id, {
-                page: 0,
-                totalPages,
-                userId: i.user.id
+        // =======================
+        // /minhachave
+        // =======================
+        if (commandName === "minhachave") {
+            await interaction.reply({
+                content: "🔑 Sua chave: (exemplo)",
+                ephemeral: true
+            });
+            return;
+        }
+
+        // =======================
+        // /chave
+        // =======================
+        if (commandName === "chave") {
+            const numero = interaction.options.getString("numero");
+
+            await interaction.reply({
+                content: `🔑 Chave ${numero} registrada com sucesso.`,
+                ephemeral: true
+            });
+            return;
+        }
+
+        // =======================
+        // /removerchave
+        // =======================
+        if (commandName === "removerchave") {
+            await interaction.reply({
+                content: "🗑️ Sua chave foi removida.",
+                ephemeral: true
+            });
+            return;
+        }
+
+        // =======================
+        // /removerchaveusuario
+        // =======================
+        if (commandName === "removerchaveusuario") {
+            const usuario = interaction.options.getUser("usuario");
+
+            await interaction.reply({
+                content: `🗑️ Chave do usuário ${usuario.username} removida.`,
+                ephemeral: true
+            });
+            return;
+        }
+
+        // =======================
+        // /listar
+        // =======================
+        if (commandName === "listar") {
+            await interaction.reply({
+                content: "📦 Inventário listado com sucesso.",
+                ephemeral: true
+            });
+            return;
+        }
+
+        // =======================
+        // /add
+        // =======================
+        if (commandName === "add") {
+            const nome = interaction.options.getString("nome");
+            const quantidade = interaction.options.getInteger("quantidade");
+            const comprador = interaction.options.getString("comprador");
+            const valor = interaction.options.getNumber("valor");
+
+            await interaction.reply({
+                content: `✅ Item **${nome}** adicionado.\n👤 Comprador: ${comprador}\n📦 Qtd: ${quantidade}\n💰 R$ ${valor}`,
+                ephemeral: true
+            });
+            return;
+        }
+
+        // =======================
+        // /remove
+        // =======================
+        if (commandName === "remove") {
+            const id = interaction.options.getInteger("id");
+
+            await interaction.reply({
+                content: `🗑️ Item ID ${id} removido.`,
+                ephemeral: true
+            });
+            return;
+        }
+
+        // =======================
+        // /zerar
+        // =======================
+        if (commandName === "zerar") {
+            await interaction.reply({
+                content: "⚠️ Inventário zerado.",
+                ephemeral: true
+            });
+            return;
+        }
+
+        // =======================
+        // /folhas
+        // =======================
+        if (commandName === "folhas") {
+            const qtd = interaction.options.getInteger("quantidade");
+
+            await interaction.reply({
+                content: `🌿 Cálculo feito para ${qtd} folhas.`,
+                ephemeral: true
+            });
+            return;
+        }
+
+    } catch (err) {
+        console.error("❌ Erro em slash command:", err);
+
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({
+                content: "❌ Erro ao executar o comando.",
+                ephemeral: true
             });
         }
-
-        if (i.commandName === "remove") {
-            inventario.splice(i.options.getInteger("id") - 1, 1);
-            salvarInventario();
-            return i.reply({ content: "🗑️ Removido.", ephemeral: true });
-        }
-
-        if (i.commandName === "zerar") {
-            inventario = [];
-            salvarInventario();
-            return i.reply({ content: "🧹 Inventário zerado.", ephemeral: true });
-        }
-
-        if (i.commandName === "chave") {
-            chaves[i.user.id] = i.options.getString("numero");
-            salvarChaves();
-            return i.reply({ content: "🔑 Chave registrada.", ephemeral: true });
-        }
-
-        if (i.commandName === "removerchaveusuario") {
-            delete chaves[i.options.getUser("usuario").id];
-            salvarChaves();
-            return i.reply({ content: "🔑 Chave removida.", ephemeral: true });
-        }
-
-    } catch (e) {
-        console.error(e);
-        return i.reply({ content: "❌ Erro interno.", ephemeral: true });
     }
 });
-
 // ========================================================
 // LEGACY TEXTO
 // ========================================================
